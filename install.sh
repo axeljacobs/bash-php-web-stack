@@ -87,6 +87,7 @@ apt install \
 	php"$php_version"-xml \
 	php"$php_version"-xmlrpc \
 	php"$php_version"-zip \
+	php"$php_version"-imagick \
 
 # Install MariaDB
 #-----------------
