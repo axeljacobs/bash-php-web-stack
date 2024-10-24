@@ -33,81 +33,84 @@ print_green "Installing prerequisites..."
 # Install Webserver
 #-------------------
 
+# check for existing webserver
 webserver_services=("caddy" "apache2" "nginx")
 webserver_found=""
-
+webserver=""
 for service in "${webserver_services[@]}"; do
     if service_exists "$service"; then
         webserver_found="$service"
         break
         print_red "a webserver $webserver_found is already installed"
-      else
-        PS3='Which webserver do you want to install ?: '
-        options=("caddy" "nginx" "apache2" "Quit")
-        select opt in "${options[@]}"
-        do
-            case $opt in
-                "caddy")
-                    webserver="caddy"
-                    break
-                    ;;
-                "nginx")
-                    webserver="nginx"
-                    break
-                    ;;
-                "apache2")
-                    webserver="apache2"
-                    break
-                    ;;
-                "Quit")
-                    break
-                    ;;
-                *) echo "invalid option $REPLY";;
-            esac
-        done
     fi
 done
 
 
+# No webserver found choose and install ($webserver_found is empty)
+if [ -z "$webserver_found" ] ; then
+  PS3='Which webserver do you want to install ?: '
+  options=("caddy" "nginx" "apache2" "Quit")
+  select opt in "${options[@]}"
+  do
+    case $opt in
+      "caddy")
+        webserver="caddy"
+        break
+        ;;
+      "nginx")
+        webserver="nginx"
+        break
+        ;;
+      "apache2")
+        webserver="apache2"
+        break
+        ;;
+      "Quit")
+        break
+        ;;
+      *) echo "invalid option $REPLY";;
+    esac
+  done
 
-if ! $webserver_found; then
+
   print_green "Installing $webserver..."
-    if [ "$webserver" = "caddy" ]; then
+  if [ "$webserver" = "caddy" ]; then
 
-      echo "caddy"
-      sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
-      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
-      sudo apt update
-      sudo apt install caddy
-      systemctl start caddy && systemctl enable caddy
-      systemctl status caddy
-      webserver_user="caddy"
-      webserver_group="caddy"
+    echo "caddy"
+    sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+    sudo apt update
+    sudo apt install caddy
+    systemctl start caddy && systemctl enable caddy
+    systemctl status caddy
+    webserver_user="caddy"
+    webserver_group="caddy"
 
-    elif [ "$webserver" = "nginx" ]; then
+  elif [ "$webserver" = "nginx" ]; then
 
-      echo "nginx"
-      apt add ppa:ondrej/nginx-mainline
-      apt install nginx -y
-      systemctl start nginx && systemctl enable nginx
-      systemctl status nginx
-      webserver_user="www-data"
-      webserver_group="www-data"
+    echo "nginx"
+    apt add ppa:ondrej/nginx-mainline
+    apt install nginx -y
+    systemctl start nginx && systemctl enable nginx
+    systemctl status nginx
+    webserver_user="www-data"
+    webserver_group="www-data"
 
-    elif [ "$webserver" = "apache2" ]; then
-      echo "apache2"
-      add ppa:ondrej/apache2
-      webserver_user="www-data"
-      webserver_group="www-data"
-      echo "Not managed yet... quit"
-      exit
-    else
-      echo "Error... quit"
-      exit
-    fi
+  elif [ "$webserver" = "apache2" ]; then
+    echo "apache2"
+    add ppa:ondrej/apache2
+    webserver_user="www-data"
+    webserver_group="www-data"
+    echo "Not managed yet... quit"
+    exit
+  else
+    echo "Error... quit"
+    exit
+  fi
 fi
 
+exit
 
 # Install PHP
 #-------------
