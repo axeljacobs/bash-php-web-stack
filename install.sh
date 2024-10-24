@@ -34,7 +34,7 @@ apt install nginx -y
 systemctl start nginx && systemctl enable nginx
 systemctl status nginx
 
-# Install PUP
+# Install PHP
 #-------------
 print_green "Installing PHP..."
 
