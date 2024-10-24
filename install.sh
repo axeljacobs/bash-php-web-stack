@@ -162,7 +162,7 @@ print_green "installing php$php_version"
 #
 # Check if there is a difference with 8.x and 7.4 cfr apt list --installed | grep php on wordpress server
 #
-apt install \
+apt install -y \
 	php"$php_version" \
 	php"$php_version"-cli \
 	php"$php_version"-common \
