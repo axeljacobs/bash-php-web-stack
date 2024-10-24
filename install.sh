@@ -119,18 +119,18 @@ print_green "Please entre the site name"
 read -p "Website name (ie www.flexiways.be, intranet.nexx.be, nexxit.be) [website]:" sitename
 sitename=${sitename:-website}
 
-mkdir /var/www/"$sitename"
+mkdir -p /var/www/"$sitename"
 chown www-data:www-data /var/www/"$sitename"
 chmod 770 /var/www/"$sitename"
 
-mkdir /var/www/"$sitename"/logs
+mkdir -p /var/www/"$sitename"/logs
 chown www-data:www-data /var/www/"$sitename"/logs
 chmod 2750 /var/www/"$sitename"/logs
 
-mkdir /var/www/"$sitename"/backups
+mkdir -p /var/www/"$sitename"/backups
 chown root:deploy /var/www/"$sitename"/backups
 chmod 2750 /var/www/"$sitename"/backups
 
-mkdir /var/www/"$sitename"/www
+mkdir -p /var/www/"$sitename"/www
 chown www-data:www-data /var/www/"$sitename"/www
 chmod 2770 /var/www/"$sitename"/www
