@@ -13,3 +13,9 @@ if [[ $EUID -ne 0 ]]; then
   print_red "This script must be run as root."
   exit 1
 fi
+
+# Update & upgrade
+#------------------
+
+print_green "Updating package index and upgrading installed packages..."
+apt update && apt upgrade -y
