@@ -21,6 +21,16 @@ service_is_enabled() {
     systemctl is-enabled --quiet "$1"
 }
 
+set_webserver_credentials() {
+  if [ "$1" = "caddy" ]; then
+    webserver_user="caddy"
+    webserver_group="caddy"
+  else
+    webserver_user="www-data"
+    webserver_group="www-data"
+  fi
+}
+
 # Check root
 #------------
 if [[ $EUID -ne 0 ]]; then
@@ -51,6 +61,7 @@ for service in "${webserver_services[@]}"; do
     if service_exists "$service"; then
         webserver_found="$service"
         webserver="$service"
+        set_webserver_credentials "$service"
         print_red "Webserver $webserver_found is already installed"
         break
     fi
@@ -94,8 +105,7 @@ if [ -z "$webserver_found" ] ; then
     sudo apt update
     sudo apt install caddy
     systemctl start caddy && systemctl enable caddy
-    webserver_user="caddy"
-    webserver_group="caddy"
+    set_webserver_credentials "caddy"
 
   elif [ "$webserver" = "nginx" ]; then
     echo "nginx"
@@ -103,14 +113,12 @@ if [ -z "$webserver_found" ] ; then
     apt install nginx -y
     systemctl start nginx && systemctl enable nginx
     systemctl status nginx
-    webserver_user="www-data"
-    webserver_group="www-data"
+    set_webserver_credentials "www-data"
 
   elif [ "$webserver" = "apache2" ]; then
     echo "apache2"
     add ppa:ondrej/apache2
-    webserver_user="www-data"
-    webserver_group="www-data"
+    set_webserver_credentials "www-data"
     echo "Not managed yet... quit"
     exit
   else
