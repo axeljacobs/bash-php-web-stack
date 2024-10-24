@@ -67,16 +67,26 @@ done
 #echo "You chose pup version: $php_version"
 
 print_green "installing php$php_version"
+#
+# Check if there is a difference with 8.x and 7.4 cfr apt list --installed | grep php on wordpress server
+#
 apt install \
 	php"$php_version" \
 	php"$php_version"-cli \
 	php"$php_version"-common \
-	php"$php_version"-fpm \
-	php"$php_version"-xml \
-	php"$php_version"-zip \
-	php"$php_version"-mbstring \
 	php"$php_version"-curl \
+	php"$php_version"-fpm \
+	php"$php_version"-gd \
+	php"$php_version"-intl \
+	php"$php_version"-json \
+	php"$php_version"-mbstring \
+	php"$php_version"-mcrypt \
+	php"$php_version"-mysql \
 	php"$php_version"-opcache \
+	php"$php_version"-readline \
+	php"$php_version"-xml \
+	php"$php_version"-xmlrpc \
+	php"$php_version"-zip \
 
 # Install MariaDB
 #-----------------
