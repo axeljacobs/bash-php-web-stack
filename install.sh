@@ -133,7 +133,8 @@ print_green "Installing PHP..."
 sudo add-apt-repository ppa:ondrej/php -y
 sudo apt update
 
-PS3='Which pup version do you want to install ?: '
+# Choose PHP version
+PS3='Which php version do you want to install ?: '
 options=("7.4" "8.2" "8.3" "Quit")
 select opt in "${options[@]}"
 do
@@ -156,7 +157,6 @@ do
         *) echo "invalid option $REPLY";;
     esac
 done
-#echo "You chose pup version: $php_version"
 
 print_green "installing php$php_version"
 #
@@ -183,12 +183,19 @@ apt install \
 # Install MariaDB
 #-----------------
 if service_exists "mysql"; then
-  print_red "MariaDB already installed and running"
+  print_red "MariaDB already installed"
 else
   apt install mariadb-server -y
   systemctl start mariadb && systemctl enable mariadb
   systemctl status mariadb
   mysql_secure_installation
+fi
+
+# Check if database is running and enable
+if service_is_running mariadb && service_is_enabled mariadb; then
+    print_green "Service mariadb is running and enabled."
+else
+    print_red "Service mariadb is either not running or not enabled."
 fi
 
 # Setup user account & group
