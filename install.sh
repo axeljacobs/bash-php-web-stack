@@ -279,7 +279,7 @@ print_green "Please entre the site name"
 read -p "Website name (ie www.flexiways.be, intranet.nexx.be, nexxit.be) [website]:" sitename
 sitename=${sitename:-website}
 
-if ! check_folder_exist "/var/www/$sitename"; then
+if ! check_folder_exists "/var/www/$sitename"; then
   print_red "Warning /var/www/$sitename already exists"
 else
   print_green "creating /var/www/$sitename folder and subfolders with permission for $webserver"
