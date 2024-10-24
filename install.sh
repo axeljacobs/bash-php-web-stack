@@ -24,3 +24,56 @@ apt update && apt upgrade -y
 # Install required packages for PHP, MySQL, Nginx
 #-------------------------------------------------
 print_green "Installing prerequisites..."
+
+
+# Install NGINX
+#---------------
+print_green "Installing Nginx..."
+
+apt install nginx -y
+systemctl start nginx && systemctl enable nginx
+systemctl status nginx
+
+# Install PUP
+#-------------
+print_green "Installing PHP..."
+
+sudo add-apt-repository ppa:ondrej/php -y
+sudo apt update
+
+PS3='Which pup version do you want to install ?: '
+options=("7.4" "8.2" "8.3" "Quit")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "7.4")
+            php_version="7.4"
+            break
+            ;;
+        "8.2")
+            php_version="8.2"
+            break
+            ;;
+        "8.3")
+            php_version="8.3"
+            break
+            ;;
+        "Quit")
+            break
+            ;;
+        *) echo "invalid option $REPLY";;
+    esac
+done
+#echo "You chose pup version: $php_version"
+
+print_green "installing php$php_version"
+apt install \
+	php"$php_version" \
+	php"$php_version"-cli \
+	php"$php_version"-common \
+	php"$php_version"-fpm \
+	php"$php_version"-xml \
+	php"$php_version"-zip \
+	php"$php_version"-mbstring \
+	php"$php_version"-curl \
+	php"$php_version"-opcache \
