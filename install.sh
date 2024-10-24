@@ -100,3 +100,26 @@ print_green "Add deploy user"
 useradd -m -g "deploy" -s /bin/bash "deploy"
 usermod -a -G www-data deploy
 
+# Setup website folders
+#-----------------------
+
+print_green "Please entre the site name"
+# shellcheck disable=SC2162
+read -p "Website name (ie www.flexiways.be, intranet.nexx.be, nexxit.be) [website]:" sitename
+sitename=${sitename:-website}
+
+mkdir /var/www/"$sitename"
+chown www-data:www-data /var/www/"$sitename"
+chmod 770 www-data:www-data /var/www/"$sitename"
+
+mkdir /var/www/"$sitename"/logs
+chown www-data:www-data /var/www/"$sitename"/logs
+chmod 2750 www-data:www-data /var/www/"$sitename"/logs
+
+mkdir /var/www/"$sitename"/backups
+chown root:deploy /var/www/"$sitename"/backups
+chmod 2750 www-data:www-data /var/www/"$sitename"/backups
+
+mkdir /var/www/"$sitename"/www
+chown www-data:www-data /var/www/"$sitename"/www
+chmod 2770 www-data:www-data /var/www/"$sitename"/www
