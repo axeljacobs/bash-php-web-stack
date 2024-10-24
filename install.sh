@@ -121,16 +121,16 @@ sitename=${sitename:-website}
 
 mkdir /var/www/"$sitename"
 chown www-data:www-data /var/www/"$sitename"
-chmod 770 www-data:www-data /var/www/"$sitename"
+chmod 770 /var/www/"$sitename"
 
 mkdir /var/www/"$sitename"/logs
 chown www-data:www-data /var/www/"$sitename"/logs
-chmod 2750 www-data:www-data /var/www/"$sitename"/logs
+chmod 2750 /var/www/"$sitename"/logs
 
 mkdir /var/www/"$sitename"/backups
 chown root:deploy /var/www/"$sitename"/backups
-chmod 2750 www-data:www-data /var/www/"$sitename"/backups
+chmod 2750 /var/www/"$sitename"/backups
 
 mkdir /var/www/"$sitename"/www
 chown www-data:www-data /var/www/"$sitename"/www
-chmod 2770 www-data:www-data /var/www/"$sitename"/www
+chmod 2770 /var/www/"$sitename"/www
