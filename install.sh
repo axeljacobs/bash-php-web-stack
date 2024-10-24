@@ -77,3 +77,11 @@ apt install \
 	php"$php_version"-mbstring \
 	php"$php_version"-curl \
 	php"$php_version"-opcache \
+
+# Install MariaDB
+#-----------------
+
+apt install mariadb-server -y
+systemctl start mariadb && systemctl enable mariadb
+systemctl status mariadb
+mysql_secure_installation
