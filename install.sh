@@ -31,6 +31,45 @@ set_webserver_credentials() {
   fi
 }
 
+check_php_version_installed() {
+  local version=$1
+  if command -v php &> /dev/null; then
+    installed_version=$(php -v | grep -oP 'PHP \K[0-9]+\.[0-9]+')
+    if [ "$installed_version" = "$version" ]; then
+      print_red "PHP version $version is already installed."
+      return 0
+    else
+      print_red "PHP is installed, but version is $installed_version (expected $version)."
+      # TODO mange migration php version
+      return 0
+    fi
+  else
+    print_green "PHP is not installed."
+    return 1
+  fi
+}
+
+check_folder_exists() {
+  local dir=$1
+
+  if [ -d "$dir" ]; then
+    return 0  # true (folder exists)
+  else
+    return 1  # false (folder does not exist)
+  fi
+}
+
+is_folder_empty() {
+  local dir=$1
+
+  if [ -z "$(ls -A "$dir")" ]; then
+    return 0  # true (folder is empty)
+  else
+    return 1  # false (folder is not empty)
+  fi
+}
+
+
 # Check root
 #------------
 if [[ $EUID -ne 0 ]]; then
@@ -166,31 +205,39 @@ do
     esac
 done
 
-print_green "installing php$php_version"
-#
-# Check if there is a difference with 8.x and 7.4 cfr apt list --installed | grep php on wordpress server
-#
-apt install -y \
-	php"$php_version" \
-	php"$php_version"-cli \
-	php"$php_version"-common \
-	php"$php_version"-curl \
-	php"$php_version"-fpm \
-	php"$php_version"-gd \
-	php"$php_version"-intl \
-	php"$php_version"-mbstring \
-	php"$php_version"-mcrypt \
-	php"$php_version"-mysql \
-	php"$php_version"-opcache \
-	php"$php_version"-readline \
-	php"$php_version"-xml \
-	php"$php_version"-xmlrpc \
-	php"$php_version"-zip \
-	php"$php_version"-imagick \
+# Check if php version already installed
 
+if is_php_version_installed "$php_version"; then
+  # installed
+  print_red "PHP $php_version is already installed"
+else
+  # not installed
+  print_green "installing php$php_version"
+  # TODO Check if there is a difference with 8.x and 7.4 cfr apt list --installed | grep php on wordpress server
+  apt install -y \
+  	php"$php_version" \
+  	php"$php_version"-cli \
+  	php"$php_version"-common \
+  	php"$php_version"-curl \
+  	php"$php_version"-fpm \
+  	php"$php_version"-gd \
+  	php"$php_version"-intl \
+  	php"$php_version"-mbstring \
+  	php"$php_version"-mcrypt \
+  	php"$php_version"-mysql \
+  	php"$php_version"-opcache \
+  	php"$php_version"-readline \
+  	php"$php_version"-xml \
+  	php"$php_version"-xmlrpc \
+  	php"$php_version"-zip \
+  	php"$php_version"-imagick
+
+fi
 
 # Install MariaDB
 #-----------------
+
+# Check mariadb is installed
 if service_exists "mariadb"; then
   print_red "MariaDB already installed"
 else
@@ -222,23 +269,35 @@ usermod -a -G "$webserver_group" deploy
 # Setup website folders
 #-----------------------
 
+if ! is_folder_empty "/var/www/"; then
+  print_red "Warning /var/www/ contains already one or more folders"
+fi
+
 print_green "Please entre the site name"
+
 # shellcheck disable=SC2162
 read -p "Website name (ie www.flexiways.be, intranet.nexx.be, nexxit.be) [website]:" sitename
 sitename=${sitename:-website}
 
-mkdir -p /var/www/"$sitename"
-chown "$webserver_user":"$webserver_group" /var/www/"$sitename"
-chmod 770 /var/www/"$sitename"
+if ! check_folder_exist "/var/www/$sitename"; then
+  print_red "Warning /var/www/$sitename already exists"
+else
+  print_green "creating /var/www/$sitename folder and subfolders with permission for $webserver"
+  mkdir -p /var/www/"$sitename"
+  chown "$webserver_user":"$webserver_group" /var/www/"$sitename"
+  chmod 770 /var/www/"$sitename"
 
-mkdir -p /var/www/"$sitename"/logs
-chown "$webserver_user":"$webserver_group" /var/www/"$sitename"/logs
-chmod 2750 /var/www/"$sitename"/logs
+  mkdir -p /var/www/"$sitename"/logs
+  chown "$webserver_user":"$webserver_group" /var/www/"$sitename"/logs
+  chmod 2750 /var/www/"$sitename"/logs
 
-mkdir -p /var/www/"$sitename"/backups
-chown root:deploy /var/www/"$sitename"/backups
-chmod 2750 /var/www/"$sitename"/backups
+  mkdir -p /var/www/"$sitename"/backups
+  chown root:deploy /var/www/"$sitename"/backups
+  chmod 2750 /var/www/"$sitename"/backups
 
-mkdir -p /var/www/"$sitename"/www
-chown "$webserver_user":"$webserver_group" /var/www/"$sitename"/www
-chmod 2770 /var/www/"$sitename"/www
+  mkdir -p /var/www/"$sitename"/www
+  chown "$webserver_user":"$webserver_group" /var/www/"$sitename"/www
+  chmod 2770 /var/www/"$sitename"/www
+fi
+
+
