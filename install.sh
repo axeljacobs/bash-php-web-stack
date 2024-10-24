@@ -50,14 +50,16 @@ webserver=""
 for service in "${webserver_services[@]}"; do
     if service_exists "$service"; then
         webserver_found="$service"
+        webserver="$service"
+        print_red "Webserver $webserver_found is already installed"
         break
-        print_red "a webserver $webserver_found is already installed"
     fi
 done
 
-
 # No webserver found choose and install ($webserver_found is empty)
 if [ -z "$webserver_found" ] ; then
+
+  # Choose webserver in a list
   PS3='Which webserver do you want to install ?: '
   options=("caddy" "nginx" "apache2" "Quit")
   select opt in "${options[@]}"
@@ -82,10 +84,9 @@ if [ -z "$webserver_found" ] ; then
     esac
   done
 
-
+  # install webserver
   print_green "Installing $webserver..."
   if [ "$webserver" = "caddy" ]; then
-
     echo "caddy"
     sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
@@ -93,14 +94,10 @@ if [ -z "$webserver_found" ] ; then
     sudo apt update
     sudo apt install caddy
     systemctl start caddy && systemctl enable caddy
-
-
-
     webserver_user="caddy"
     webserver_group="caddy"
 
   elif [ "$webserver" = "nginx" ]; then
-
     echo "nginx"
     apt add ppa:ondrej/nginx-mainline
     apt install nginx -y
@@ -128,8 +125,6 @@ if service_is_running "$webserver" && service_is_enabled "$webserver"; then
 else
     print_red "Service '$webserver' is either not running or not enabled."
 fi
-
-exit
 
 # Install PHP
 #-------------
