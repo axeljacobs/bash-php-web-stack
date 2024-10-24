@@ -85,3 +85,18 @@ apt install mariadb-server -y
 systemctl start mariadb && systemctl enable mariadb
 systemctl status mariadb
 mysql_secure_installation
+
+
+# Setup user account & group
+#----------------------------
+
+# print_green "Setup user for running the wordpress"
+# read -p 'Provide a username for the wordpress folder security (ie. prod, deploy, staging) [prod]: ' user
+# user=${user:-prod}
+# echo $user
+# useradd -m -g "$user" -s /bin/bash "$username"
+
+print_green "Add deploy user"
+useradd -m -g "deploy" -s /bin/bash "deploy"
+usermod -a -G www-data deploy
+
