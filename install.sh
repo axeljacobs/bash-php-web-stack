@@ -7,6 +7,10 @@ print_red() {
   echo -e "\e[31m$1\e[0m"
 }
 
+service_exists() {
+    systemctl list-units --full -all | grep -Fq "$1.service"
+}
+
 # Check root
 #------------
 if [[ $EUID -ne 0 ]]; then
@@ -26,13 +30,84 @@ apt update && apt upgrade -y
 print_green "Installing prerequisites..."
 
 
-# Install NGINX
-#---------------
-print_green "Installing Nginx..."
+# Install Webserver
+#-------------------
 
-apt install nginx -y
-systemctl start nginx && systemctl enable nginx
-systemctl status nginx
+webserver_services=("caddy" "apache2" "nginx")
+webserver_found=""
+
+for service in "${webserver_services[@]}"; do
+    if service_exists "$service"; then
+        webserver_found="$service"
+        break
+        print_red "a webserver $webserver_found is already installed"
+      else
+        PS3='Which webserver do you want to install ?: '
+        options=("caddy" "nginx" "apache2" "Quit")
+        select opt in "${options[@]}"
+        do
+            case $opt in
+                "caddy")
+                    webserver="caddy"
+                    break
+                    ;;
+                "nginx")
+                    webserver="nginx"
+                    break
+                    ;;
+                "apache2")
+                    webserver="apache2"
+                    break
+                    ;;
+                "Quit")
+                    break
+                    ;;
+                *) echo "invalid option $REPLY";;
+            esac
+        done
+    fi
+done
+
+
+
+if ! $webserver_found; then
+  print_green "Installing $webserver..."
+    if [ "$webserver" = "caddy" ]; then
+
+      echo "caddy"
+      sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+      curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+      sudo apt update
+      sudo apt install caddy
+      systemctl start caddy && systemctl enable caddy
+      systemctl status caddy
+      webserver_user="caddy"
+      webserver_group="caddy"
+
+    elif [ "$webserver" = "nginx" ]; then
+
+      echo "nginx"
+      apt add ppa:ondrej/nginx-mainline
+      apt install nginx -y
+      systemctl start nginx && systemctl enable nginx
+      systemctl status nginx
+      webserver_user="www-data"
+      webserver_group="www-data"
+
+    elif [ "$webserver" = "apache2" ]; then
+      echo "apache2"
+      add ppa:ondrej/apache2
+      webserver_user="www-data"
+      webserver_group="www-data"
+      echo "Not managed yet... quit"
+      exit
+    else
+      echo "Error... quit"
+      exit
+    fi
+fi
+
 
 # Install PHP
 #-------------
@@ -78,7 +153,6 @@ apt install \
 	php"$php_version"-fpm \
 	php"$php_version"-gd \
 	php"$php_version"-intl \
-	php"$php_version"-json \
 	php"$php_version"-mbstring \
 	php"$php_version"-mcrypt \
 	php"$php_version"-mysql \
@@ -91,12 +165,14 @@ apt install \
 
 # Install MariaDB
 #-----------------
-
-apt install mariadb-server -y
-systemctl start mariadb && systemctl enable mariadb
-systemctl status mariadb
-mysql_secure_installation
-
+if service_exists "mysql"; then
+  print_red "MariaDB already installed and running"
+else
+  apt install mariadb-server -y
+  systemctl start mariadb && systemctl enable mariadb
+  systemctl status mariadb
+  mysql_secure_installation
+fi
 
 # Setup user account & group
 #----------------------------
@@ -109,7 +185,7 @@ mysql_secure_installation
 
 print_green "Add deploy user"
 useradd -m -g "deploy" -s /bin/bash "deploy"
-usermod -a -G www-data deploy
+usermod -a -G "$webserver_group" deploy
 
 # Setup website folders
 #-----------------------
@@ -120,11 +196,11 @@ read -p "Website name (ie www.flexiways.be, intranet.nexx.be, nexxit.be) [websit
 sitename=${sitename:-website}
 
 mkdir -p /var/www/"$sitename"
-chown www-data:www-data /var/www/"$sitename"
+chown "$webserver_user":"$webserver_group" /var/www/"$sitename"
 chmod 770 /var/www/"$sitename"
 
 mkdir -p /var/www/"$sitename"/logs
-chown www-data:www-data /var/www/"$sitename"/logs
+chown "$webserver_user":"$webserver_group" /var/www/"$sitename"/logs
 chmod 2750 /var/www/"$sitename"/logs
 
 mkdir -p /var/www/"$sitename"/backups
@@ -132,5 +208,5 @@ chown root:deploy /var/www/"$sitename"/backups
 chmod 2750 /var/www/"$sitename"/backups
 
 mkdir -p /var/www/"$sitename"/www
-chown www-data:www-data /var/www/"$sitename"/www
+chown "$webserver_user":"$webserver_group" /var/www/"$sitename"/www
 chmod 2770 /var/www/"$sitename"/www
