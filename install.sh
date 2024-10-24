@@ -11,6 +11,16 @@ service_exists() {
     systemctl list-units --full -all | grep -Fq "$1.service"
 }
 
+# Function to check if a service is running
+service_is_running() {
+    systemctl is-active --quiet "$1"
+}
+
+# Function to check if a service is enabled
+service_is_enabled() {
+    systemctl is-enabled --quiet "$1"
+}
+
 # Check root
 #------------
 if [[ $EUID -ne 0 ]]; then
@@ -83,7 +93,9 @@ if [ -z "$webserver_found" ] ; then
     sudo apt update
     sudo apt install caddy
     systemctl start caddy && systemctl enable caddy
-    systemctl status caddy
+
+
+
     webserver_user="caddy"
     webserver_group="caddy"
 
@@ -108,6 +120,13 @@ if [ -z "$webserver_found" ] ; then
     echo "Error... quit"
     exit
   fi
+fi
+
+# Check if webserver is running and enable
+if service_is_running "$webserver" && service_is_enabled "$webserver"; then
+    print_green "Service '$webserver' is running and enabled."
+else
+    print_red "Service '$webserver' is either not running or not enabled."
 fi
 
 exit
