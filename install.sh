@@ -187,7 +187,6 @@ if service_exists "mysql"; then
 else
   apt install mariadb-server -y
   systemctl start mariadb && systemctl enable mariadb
-  systemctl status mariadb
   mysql_secure_installation
 fi
 
