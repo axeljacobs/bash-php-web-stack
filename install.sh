@@ -19,3 +19,8 @@ fi
 
 print_green "Updating package index and upgrading installed packages..."
 apt update && apt upgrade -y
+
+
+# Install required packages for PHP, MySQL, Nginx
+#-------------------------------------------------
+print_green "Installing prerequisites..."
