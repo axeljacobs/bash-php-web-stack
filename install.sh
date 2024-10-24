@@ -188,9 +188,10 @@ apt install -y \
 	php"$php_version"-zip \
 	php"$php_version"-imagick \
 
+
 # Install MariaDB
 #-----------------
-if service_exists "mysql"; then
+if service_exists "mariadb"; then
   print_red "MariaDB already installed"
 else
   apt install mariadb-server -y
