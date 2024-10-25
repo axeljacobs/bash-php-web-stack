@@ -128,7 +128,7 @@ rename_extensions() {
     mv "$file" "$_new_file"
 
     # Output the renamed file
-    echo "Renamed $file to $_new_file"
+		# echo "Renamed $file to $_new_file"
   done
 }
 
@@ -144,7 +144,7 @@ fi
 #------------------
 
 print_green "Updating package index and upgrading installed packages..."
-apt update && apt upgrade -y
+# apt update && apt upgrade -y
 
 
 # Install required packages for PHP, MySQL, Nginx
@@ -395,17 +395,35 @@ if list_files_with_extension "$php_pool_folder" "$php_pool_ext"; then
   print_red "configuration files already exists"
 
 	# disable existing php-fpm pool conf files
-	if yes_no_prompt "Do you want to disable other php-fpm configs?"; then
+	if yes_no_prompt "Do you want to disable and keep all php-fpm configs?"; then
 		print_green "disable existing php-fpm pool configs"
-		rename_extensions "$php_pool_folder" "conf" "disabled"
+		rename_extensions "$php_pool_folder" "$php_pool_ext" "disabled"
 	fi
+fi
 
-# create new php-fpm pool config file with content
-else
+# Set to always configure a php_pool unless said otherwise
+configure_php_pool="yes"
+# check if a specific $sitename.conf exists
+if [ -e "${php_pool_folder}${sitename}.${php_pool_ext}" ]; then
+	print_red	"${php_pool_folder}${sitename}.${php_pool_ext} already exists"
+
+	# create new php-fpm pool config file with content
+	if yes_no_prompt "Do you want to create a new php-fpm configs for ${sitename}?"; then
+		print_green "disable existing php-fpm pool configs"
+
+		current_datetime=$(date +"%Y-%m-%d_%H-%M-%S")
+		# rename file
+		mv "${php_pool_folder}${sitename}.${php_pool_ext}" "${php_pool_folder}${sitename}.disabled_${current_datetime}"
+	else
+		configure_php_pool="no"
+	fi
+fi
+
+# create a new ph pool config for the sitename
+
+if [ "$configure_php_pool" = 'yes' ]; then
 	php_pool_file="$php_pool_folder$sitename.$php_pool_ext"
   php_version_underscore="${php_version//./_}"
-
-  echo "$php_pool_file"
 
   # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   # WARNING TAB INDENT must BE REAL TABS not SPACES otherwise
@@ -430,13 +448,24 @@ else
 	chdir = /
 	EOF
 	echo "Configuration for $sitename has been written."
+
+	# restart php
+	systemctl restart "php${php_version}-fpm"
+fi
+
+# check process for php-fpm pool
+print_green "Checking php-pool running for ${sitename}"
+# shellcheck disable=SC2126
+# shellcheck disable=SC2009
+process_count=$(ps aux | grep "php-fpm: pool ${sitename}" | grep -c grep | wc -l)
+
+if [ "$process_count" -eq 0 ]; then
+  print_red "No php pool running for ${sitename}"
+else
+  echo "There are ${process_count} php-fpm processes running for the pool ${sitename}."
 fi
 
 
-
-# restart php
-
-# check process for php-fpm pool
 
 # Setup webserver config for the site
 #-------------------------------------
