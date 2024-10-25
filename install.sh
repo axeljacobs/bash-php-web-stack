@@ -69,6 +69,25 @@ is_folder_empty() {
   fi
 }
 
+list_files_with_extension() {
+  local dir=$1
+  local ext=$2
+
+  if [ -d "$dir" ]; then
+    files=$(ls "$dir"/*."$ext" 2> /dev/null)
+    if [ -z "$files" ]; then
+      # echo "No .$ext files found in '$dir'."
+      rerurn 1 # no files.ext found in folder
+    else
+      echo "Listing .$ext files in '$dir':"
+      echo "$files"
+      return 0
+    fi
+  else
+    print_red "'$dir' is not a valid directory."
+  fi
+}
+
 
 # Check root
 #------------
@@ -273,13 +292,13 @@ if ! is_folder_empty "/var/www/"; then
   print_red "Warning /var/www/ contains already one or more folders"
 fi
 
-print_green "Please entre the site name"
+print_green "Please enter the site name"
 
 # shellcheck disable=SC2162
 read -p "Website name (ie www.flexiways.be, intranet.nexx.be, nexxit.be) [website]:" sitename
 sitename=${sitename:-website}
 
-if ! check_folder_exists "/var/www/$sitename"; then
+if check_folder_exists "/var/www/$sitename"; then
   print_red "Warning /var/www/$sitename already exists"
 else
   print_green "creating /var/www/$sitename folder and subfolders with permission for $webserver"
@@ -300,4 +319,50 @@ else
   chmod 2770 /var/www/"$sitename"/www
 fi
 
+# Setup php-fpm pool
+#--------------------
+print_red "Setup php-fpm pool configuration"
 
+# detect existing files
+php_pool_folder="/etc/php/$php_version/fpm/pool.d/"
+php_pool_ext="conf"
+
+if list_files_with_extension "$php_pool_folder" "$php_pool_ext"; then
+  print_red "configuration files already exists"
+  # OPTION disable existing files
+
+# create new file with content
+else
+  php_pool_file="$php_pool_folder/$sitename.$php_pool_ext"
+
+  # shellcheck disable=SC1073
+  # shellcheck disable=SC1009
+  cat <<EOL > "$php_pool_file"
+  ["$sitename"]
+
+  user = "$webserver_user"
+  group = "$webserver_group"
+
+  listen = /var/run/php7_4-fpm-"$sitename".sock
+  listen.owner = "$webserver_user"
+  listen.group = "$webserver_group"
+
+  pm = dynamic
+  pm.max_children = 5
+  pm.start_servers = 2
+  pm.min_spare_servers = 1
+  pm.max_spare_servers = 3
+
+  chdir = /
+  EOL
+
+fi
+
+
+
+# restart php
+
+# check process for php-fpm pool
+
+# Setup webserver config for the site
+#-------------------------------------
