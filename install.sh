@@ -107,6 +107,31 @@ list_files_with_extension() {
   fi
 }
 
+rename_extensions() {
+  local directory="$1"
+  local original_extension="$2"
+  local new_extension="$3"
+  _current_datetime=$(date +"%Y-%m-%d_%H-%M-%S")
+
+  # Iterate over all files with the original extension in the directory
+  for file in "$directory"/*."$original_extension"; do
+    # Check if file exists (handles case where no file matches the pattern)
+    [ -e "$file" ] || continue
+
+    # Get the file name without the extension
+    _base_name=$(basename "$file" ."$original_extension")
+
+    # Generate the new file name with the new extension
+    _new_file="$directory/${_base_name}.${new_extension}_${_current_datetime}"
+
+    # Rename the file
+    mv "$file" "$_new_file"
+
+    # Output the renamed file
+    echo "Renamed $file to $_new_file"
+  done
+}
+
 
 # Check root
 #------------
@@ -368,32 +393,40 @@ php_pool_ext="conf"
 
 if list_files_with_extension "$php_pool_folder" "$php_pool_ext"; then
   print_red "configuration files already exists"
-  # OPTION disable existing files
 
-# create new file with content
+	# disable existing php-fpm pool conf files
+	if yes_no_prompt "Do you want to disable other php-fpm configs?"; then
+		print_green "disable existing php-fpm pool configs"
+		rename_extensions "$php_pool_folder" "conf" "disabled"
+	fi
+
+# create new php-fpm pool config file with content
 else
 	php_pool_file="$php_pool_folder$sitename.$php_pool_ext"
   php_version_underscore="${php_version//./_}"
 
   echo "$php_pool_file"
 
-  #
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   # WARNING TAB INDENT must BE REAL TABS not SPACES otherwise
   # EOF and inside tabs will not work properly
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	cat > "$php_pool_file" <<-EOF
 	[$sitename]
+
 	user = $webserver_user
 	group = $webserver_group
 	listen.owner = $webserver_user
 	listen.group = $webserver_group
 
-	listen = /var/run/php${php_version_underscore}-fpm-"$sitename".sock
+	listen = /var/run/php${php_version_underscore}-fpm-$sitename.sock
 
 	pm = dynamic
 	pm.max_children = 5
 	pm.start_servers = 2
 	pm.min_spare_servers = 1
 	pm.max_spare_servers = 3
+
 	chdir = /
 	EOF
 	echo "Configuration for $sitename has been written."
