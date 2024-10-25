@@ -216,23 +216,29 @@ fi
 #-------------
 print_green "Installing PHP..."
 
+# check if any php is installed
 if command -v php >/dev/null 2>&1; then
   php_major_version_installed=$(php --version | grep -oP '^PHP \K[0-9]+')
   print_red "PHP $php_major_version_installed already installed"
+
+  # ask to continue to install new version
   if yes_no_prompt "Do you want to install a new php?"; then
-    install_php=0
+    install_php="yes"
   else
-    install_php=1
+    install_php="no"
   fi
+
+# no php installed
 else
-  echo "PHP is not installed on this system."
+  install_php="yes"
 fi
 
-if "$install_php"; then
+# Check continue php install
+if [ "$install_php" = 'yes' ]; then
   sudo add-apt-repository ppa:ondrej/php -y
   sudo apt update
 
-  # Choose PHP version
+  # Ask for php version to install
   PS3='Which php version do you want to install ?: '
   options=("7.4" "8.2" "8.3" "Quit")
   select opt in "${options[@]}"
@@ -257,8 +263,7 @@ if "$install_php"; then
       esac
   done
 
-  # Check if php version already installed
-
+  # Check if the requested php version is already installed
   if is_php_version_installed "$php_version"; then
     # installed
     print_red "PHP $php_version is already installed"
@@ -286,7 +291,6 @@ if "$install_php"; then
 
   fi
 fi
-
 
 # Install MariaDB
 #-----------------
