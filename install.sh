@@ -7,6 +7,26 @@ print_red() {
   echo -e "\e[31m$1\e[0m"
 }
 
+yes_no_prompt() {
+  local prompt_message=$1
+  local user_input
+
+  while true; do
+    read -p "$prompt_message (y/n): " user_input
+    case $user_input in
+      [Yy]* )
+        return 0
+        ;;
+      [Nn]* )
+        return 1
+        ;;
+      * )
+        echo "Please answer yes or no (y/n)."
+        ;;
+    esac
+  done
+}
+
 service_exists() {
     systemctl list-units --full -all | grep -Fq "$1.service"
 }
@@ -196,62 +216,77 @@ fi
 #-------------
 print_green "Installing PHP..."
 
-sudo add-apt-repository ppa:ondrej/php -y
-sudo apt update
-
-# Choose PHP version
-PS3='Which php version do you want to install ?: '
-options=("7.4" "8.2" "8.3" "Quit")
-select opt in "${options[@]}"
-do
-    case $opt in
-        "7.4")
-            php_version="7.4"
-            break
-            ;;
-        "8.2")
-            php_version="8.2"
-            break
-            ;;
-        "8.3")
-            php_version="8.3"
-            break
-            ;;
-        "Quit")
-            break
-            ;;
-        *) echo "invalid option $REPLY";;
-    esac
-done
-
-# Check if php version already installed
-
-if is_php_version_installed "$php_version"; then
-  # installed
-  print_red "PHP $php_version is already installed"
+if command -v php >/dev/null 2>&1; then
+  php_major_version_installed=$(php --version | grep -oP '^PHP \K[0-9]+')
+  print_red "PHP $php_major_version_installed already installed"
+  if yes_no_prompt "Do you want to install or reinstall php?"; then
+    install_php=0
+  else
+    install_php=1
+  fi
 else
-  # not installed
-  print_green "installing php$php_version"
-  # TODO Check if there is a difference with 8.x and 7.4 cfr apt list --installed | grep php on wordpress server
-  apt install -y \
-  	php"$php_version" \
-  	php"$php_version"-cli \
-  	php"$php_version"-common \
-  	php"$php_version"-curl \
-  	php"$php_version"-fpm \
-  	php"$php_version"-gd \
-  	php"$php_version"-intl \
-  	php"$php_version"-mbstring \
-  	php"$php_version"-mcrypt \
-  	php"$php_version"-mysql \
-  	php"$php_version"-opcache \
-  	php"$php_version"-readline \
-  	php"$php_version"-xml \
-  	php"$php_version"-xmlrpc \
-  	php"$php_version"-zip \
-  	php"$php_version"-imagick
-
+  echo "PHP is not installed on this system."
 fi
+
+if "$install_php"; then
+  sudo add-apt-repository ppa:ondrej/php -y
+  sudo apt update
+
+  # Choose PHP version
+  PS3='Which php version do you want to install ?: '
+  options=("7.4" "8.2" "8.3" "Quit")
+  select opt in "${options[@]}"
+  do
+      case $opt in
+          "7.4")
+              php_version="7.4"
+              break
+              ;;
+          "8.2")
+              php_version="8.2"
+              break
+              ;;
+          "8.3")
+              php_version="8.3"
+              break
+              ;;
+          "Quit")
+              break
+              ;;
+          *) echo "invalid option $REPLY";;
+      esac
+  done
+
+  # Check if php version already installed
+
+  if is_php_version_installed "$php_version"; then
+    # installed
+    print_red "PHP $php_version is already installed"
+  else
+    # not installed
+    print_green "installing php$php_version"
+    # TODO Check if there is a difference with 8.x and 7.4 cfr apt list --installed | grep php on wordpress server
+    apt install -y \
+    	php"$php_version" \
+    	php"$php_version"-cli \
+    	php"$php_version"-common \
+    	php"$php_version"-curl \
+    	php"$php_version"-fpm \
+    	php"$php_version"-gd \
+    	php"$php_version"-intl \
+    	php"$php_version"-mbstring \
+    	php"$php_version"-mcrypt \
+    	php"$php_version"-mysql \
+    	php"$php_version"-opcache \
+    	php"$php_version"-readline \
+    	php"$php_version"-xml \
+    	php"$php_version"-xmlrpc \
+    	php"$php_version"-zip \
+    	php"$php_version"-imagick
+
+  fi
+fi
+
 
 # Install MariaDB
 #-----------------
@@ -337,24 +372,27 @@ else
 
   # shellcheck disable=SC1073
   # shellcheck disable=SC1009
-  cat <<EOL > "$php_pool_file"
+  # shellcheck disable=SC1010
+  cat > "$php_pool_file" <<-EOF
   ["$sitename"]
 
-  user = "$webserver_user"
-  group = "$webserver_group"
+    user = "$webserver_user"
+    group = "$webserver_group"
 
-  listen = /var/run/php7_4-fpm-"$sitename".sock
-  listen.owner = "$webserver_user"
-  listen.group = "$webserver_group"
+    listen = /var/run/php7_4-fpm-"$sitename".sock
+    listen.owner = "$webserver_user"
+    listen.group = "$webserver_group"
 
-  pm = dynamic
-  pm.max_children = 5
-  pm.start_servers = 2
-  pm.min_spare_servers = 1
-  pm.max_spare_servers = 3
+    pm = dynamic
+    pm.max_children = 5
+    pm.start_servers = 2
+    pm.min_spare_servers = 1
+    pm.max_spare_servers = 3
 
-  chdir = /
-  EOL
+    chdir = /
+  EOF
+
+
 
 fi
 
