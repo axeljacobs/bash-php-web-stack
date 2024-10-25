@@ -1,5 +1,7 @@
 #!/bin/bash
 
+TAB="$(printf '\t')"
+
 print_green() {
   echo -e "\e[32m$1\e[0m"
 }
@@ -97,10 +99,10 @@ list_files_with_extension() {
     files=$(ls "$dir"/*."$ext" 2> /dev/null)
     if [ -z "$files" ]; then
       # echo "No .$ext files found in '$dir'."
-      rerurn 1 # no files.ext found in folder
+      return 1 # no files.ext found in folder
     else
       echo "Listing .$ext files in '$dir':"
-      echo "$files"
+#      echo "$files"
       return 0
     fi
   else
@@ -218,14 +220,15 @@ print_green "Installing PHP..."
 
 # check if any php is installed
 if command -v php >/dev/null 2>&1; then
-  php_major_version_installed=$(php --version | awk -F'[ .]' '/^PHP/{print $2"."$3}')
-  print_red "PHP $php_major_version_installed already installed"
+  php_version_installed=$(php --version | awk -F'[ .]' '/^PHP/{print $2"."$3}')
+  print_red "PHP $php_version_installed already installed"
 
   # ask to continue to install new version
   if yes_no_prompt "Do you want to install a new php?"; then
     install_php="yes"
   else
     install_php="no"
+    php_version="$php_version_installed"
   fi
 
 # no php installed
@@ -372,32 +375,29 @@ if list_files_with_extension "$php_pool_folder" "$php_pool_ext"; then
 
 # create new file with content
 else
-  php_pool_file="$php_pool_folder/$sitename.$php_pool_ext"
+	php_pool_file="$php_pool_folder$sitename.$php_pool_ext"
+  php_version_underscore="${php_version//./_}"
 
-  # shellcheck disable=SC1073
-  # shellcheck disable=SC1009
-  # shellcheck disable=SC1010
-  cat > "$php_pool_file" <<-EOF
-  ["$sitename"]
+  echo "$php_pool_file"
 
-    user = "$webserver_user"
-    group = "$webserver_group"
-
-    listen = /var/run/php7_4-fpm-"$sitename".sock
-    listen.owner = "$webserver_user"
-    listen.group = "$webserver_group"
-
-    pm = dynamic
-    pm.max_children = 5
-    pm.start_servers = 2
-    pm.min_spare_servers = 1
-    pm.max_spare_servers = 3
-
-    chdir = /
-  EOF
-
-
-
+  #
+  # WARNING TAB INDENT must BE REAL TABS not SPACES otherwise
+  # EOF and inside tabs will not work properly
+	cat > "$php_pool_file" <<-EOF
+	[$sitename]
+	${TAB}user = $webserver_user
+	${TAB}group = $webserver_group
+	${TAB}listen.owner = $webserver_user
+	${TAB}listen.group = $webserver_group
+	${TAB}listen = /var/run/php${php_version_underscore}-fpm-"$sitename".sock
+	${TAB}pm = dynamic
+	${TAB}pm.max_children = 5
+	${TAB}pm.start_servers = 2
+	${TAB}pm.min_spare_servers = 1
+	${TAB}tpm.max_spare_servers = 3
+	${TAB}chdir = /
+	EOF
+	echo "Configuration for $sitename has been written."
 fi
 
 
@@ -408,3 +408,5 @@ fi
 
 # Setup webserver config for the site
 #-------------------------------------
+
+
