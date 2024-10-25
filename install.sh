@@ -1,7 +1,4 @@
 #!/bin/bash
-
-TAB="$(printf '\t')"
-
 print_green() {
   echo -e "\e[32m$1\e[0m"
 }
@@ -385,17 +382,19 @@ else
   # EOF and inside tabs will not work properly
 	cat > "$php_pool_file" <<-EOF
 	[$sitename]
-	${TAB}user = $webserver_user
-	${TAB}group = $webserver_group
-	${TAB}listen.owner = $webserver_user
-	${TAB}listen.group = $webserver_group
-	${TAB}listen = /var/run/php${php_version_underscore}-fpm-"$sitename".sock
-	${TAB}pm = dynamic
-	${TAB}pm.max_children = 5
-	${TAB}pm.start_servers = 2
-	${TAB}pm.min_spare_servers = 1
-	${TAB}tpm.max_spare_servers = 3
-	${TAB}chdir = /
+	user = $webserver_user
+	group = $webserver_group
+	listen.owner = $webserver_user
+	listen.group = $webserver_group
+
+	listen = /var/run/php${php_version_underscore}-fpm-"$sitename".sock
+
+	pm = dynamic
+	pm.max_children = 5
+	pm.start_servers = 2
+	pm.min_spare_servers = 1
+	pm.max_spare_servers = 3
+	chdir = /
 	EOF
 	echo "Configuration for $sitename has been written."
 fi
