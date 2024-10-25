@@ -219,7 +219,7 @@ print_green "Installing PHP..."
 if command -v php >/dev/null 2>&1; then
   php_major_version_installed=$(php --version | grep -oP '^PHP \K[0-9]+')
   print_red "PHP $php_major_version_installed already installed"
-  if yes_no_prompt "Do you want to install or reinstall php?"; then
+  if yes_no_prompt "Do you want to install a new php?"; then
     install_php=0
   else
     install_php=1
