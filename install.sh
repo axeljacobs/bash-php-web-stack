@@ -218,7 +218,7 @@ print_green "Installing PHP..."
 
 # check if any php is installed
 if command -v php >/dev/null 2>&1; then
-  php_major_version_installed=$(php --version | grep -oP '^PHP \K[0-9]+')
+  php_major_version_installed=$(php --version | awk -F'[ .]' '/^PHP/{print $2"."$3}')
   print_red "PHP $php_major_version_installed already installed"
 
   # ask to continue to install new version
