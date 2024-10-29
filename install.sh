@@ -187,12 +187,6 @@ generate_php_pool_config() {
 		fi
 	done
 
-#	# disable existing php_pool files
-#	print_green "Disabling existing php-fpm pool config"
-#	# TODO disable in all php_versions OR LESS GOOD disable other php-fpm service
-#	# Get all installed version
-#	rename_extensions "/etc/php/${_php_version}/fpm/pool.d" "conf" "disabled"
-
 	# generate a new file
 	_php_version_underscore="${_php_version//./_}"
 	_php_pool_socket="/var/run/php${_php_version_underscore}-fpm-${_sitename}.sock"
@@ -436,6 +430,7 @@ if command -v php >/dev/null 2>&1; then
 
   # ask to continue to install new version
   if yes_no_prompt "Do you want to install a new php?"; then
+  	# TODO Stop php-fpm existing services
     install_php="yes"
   else
     install_php="no"
@@ -563,6 +558,7 @@ print_green "Setup php-fpm pool configuration"
 # Set to always configure a new php_pool and disabling the existing ones
 print_green "Generate new php-fpm ${php_version} pool config for ${sitename} for ${webserver}"
 generate_php_pool_config "$php_version" "$webserver" "$sitename"
+
 
 # Restart PHP-FPM
 systemctl restart "php${php_version}-fpm"
