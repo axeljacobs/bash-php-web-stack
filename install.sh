@@ -50,6 +50,44 @@ set_webserver_credentials() {
   fi
 }
 
+generate_site_base_folders() {
+	local _sitename="$1"
+	local _webserver="$2"
+
+	# Get correct user and groups
+	if [ "$_webserver" = "caddy" ]; then
+		_webserver_user="caddy"
+		_webserver_group="caddy"
+	else
+		_webserver_user="www-data"
+		_webserver_group="www-data"
+	fi
+
+	print_green "creating /var/www/$_sitename folder structure and permissions for $_webserver"
+
+	mkdir -p /var/www/"$_sitename"
+	chown "$_webserver_user":"$_webserver_group" /var/www/"$_sitename"
+	chmod 770 /var/www/"$_sitename"
+
+	mkdir -p /var/www/"$_sitename"/logs
+	chown "$_webserver_user":"$_webserver_group" /var/www/"$_sitename"/logs
+	chmod 2750 /var/www/"$_sitename"/logs
+
+	mkdir -p /var/www/"$_sitename"/backups
+	chown root:deploy /var/www/"$_sitename"/backups
+	chmod 2750 /var/www/"$_sitename"/backups
+
+	mkdir -p /var/www/"$_sitename"/restore/db
+	mkdir -p /var/www/"$_sitename"/restore/files
+	chown -R root:deploy /var/www/"$_sitename"/restore
+	chmod -R 2750 /var/www/"$_sitename"/restore
+
+	mkdir -p /var/www/"$_sitename"/www
+	chown "$_webserver_user":"$_webserver_group" /var/www/"$_sitename"/www
+	chmod 2770 /var/www/"$_sitename"/www
+
+}
+
 check_php_version_installed() {
   local version=$1
   if command -v php &> /dev/null; then
@@ -211,7 +249,6 @@ generate_webserver_conf_file() {
 
 				print_green "generate a new config for ${_sitename}"
 				generate_caddy_website_file "$_sitename" "$_php_pool_sock"
-
 				;;
 			"nginx")
 				# TODO generate config for nginx
@@ -263,7 +300,6 @@ for service in "${webserver_services[@]}"; do
     if service_exists "$service"; then
         webserver_found="$service"
         webserver="$service"
-        set_webserver_credentials "$service"
         print_red "Webserver $webserver_found is already installed"
         break
     fi
@@ -309,19 +345,17 @@ if [ -z "$webserver_found" ] ; then
     sudo apt update
     sudo apt install caddy -y
     systemctl start caddy && systemctl enable caddy
-    set_webserver_credentials "caddy"
   elif [ "$webserver" = "nginx" ]; then
     echo "nginx"
     apt add ppa:ondrej/nginx-mainline
     apt install nginx -y
     systemctl start nginx && systemctl enable nginx
     systemctl status nginx
-    set_webserver_credentials "www-data"
 
   elif [ "$webserver" = "apache2" ]; then
     echo "apache2"
+    # TODO add apache2
     add ppa:ondrej/apache2
-    set_webserver_credentials "www-data"
     echo "Not managed yet... quit"
     exit
   else
