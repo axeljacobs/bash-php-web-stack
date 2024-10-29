@@ -168,8 +168,8 @@ generate_caddy_website_file() {
 	$_sitename:80 {
 		# unauthorized paths
     @disallowed {
-    	path /xmlrpc.php
-    	path /wp-config.php
+			path /xmlrpc.php
+			path /wp-config.php
       path /readme.html
       path /wp-content/uploads/*.php
       path /wp-content/uploads/*/*.php
@@ -185,23 +185,17 @@ generate_caddy_website_file() {
     encode gzip
     # access log
     log {
-    	output file /var/www/$_sitename/log/$_sitename.log {
-      	roll_size 10mb
-        roll_keep 20
-        roll_keep_for 720h
-      }
-    }
+			output file /var/www/$_sitename/log/$_sitename.log {
+				roll_size 10mb
+				roll_keep 20
+				roll_keep_for 720h
+			}
+		}
 
     # Return 404 on unauthorized paths
     respond @disallowed 404
-
-
-		respond "webserver is working !"
-	}
-
-	# Import site configuration files *.caddy
-	import /etc/caddy/conf.d/*.caddy
 	EOF
+
 }
 
 
