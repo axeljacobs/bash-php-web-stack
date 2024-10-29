@@ -384,7 +384,7 @@ if [ -z "$webserver_found" ] ; then
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
     sudo apt update
-    sudo apt install caddy -y
+    sudo apt install -y caddy
     # Reformat Caddyfile
     caddy fmt "/etc/caddy/Caddyfile" -- overwrite
     # Start & enable caddy service
@@ -392,8 +392,8 @@ if [ -z "$webserver_found" ] ; then
   elif [ "$webserver" = "nginx" ]; then
     echo "nginx"
     apt add ppa:ondrej/nginx-mainline
-    apt install nginx -y
-    systemctl start nginx && systemctl enable nginx
+    apt install -y nginx
+  	systemctl start nginx && systemctl enable nginx
     systemctl status nginx
 
   elif [ "$webserver" = "apache2" ]; then
@@ -548,19 +548,18 @@ generate_site_base_folders "$sitename" "$webserver"
 
 # Setup php-fpm pool
 #--------------------
-print_red "Setup php-fpm pool configuration"
+print_green "Setup php-fpm pool configuration"
 
 # Set to always configure a new php_pool and disabling the existing ones
 print_green "Generate new php-fpm ${php_version} pool config for ${sitename} for ${webserver}"
 generate_php_pool_config "$php_version" "$webserver" "$sitename"
 
+# Restart PHP-FPM
+systemctl restart "php${php_version}-fpm"
+
 # check process for php-fpm pool
-print_green "Checking php-pool running for ${sitename}"
-# shellcheck disable=SC2126
-# shellcheck disable=SC2009
+print_green "Waiting 2 seconds and checking running php-pools for ${sitename}"
 sleep 2
-# shellcheck disable=SC2009
-# shellcheck disable=SC2126
 process_count=$(ps aux | grep "php-fpm: pool ${sitename}" | grep -v grep | wc -l)
 
 if [ "$process_count" -eq 0 ]; then
