@@ -185,7 +185,7 @@ generate_caddy_website_file() {
     encode gzip
     # access log
     log {
-			output file /var/www/$_sitename/log/$_sitename.log {
+			output file /var/www/$_sitename/logs/$_sitename.log {
 				roll_size 10mb
 				roll_keep 20
 				roll_keep_for 720h
