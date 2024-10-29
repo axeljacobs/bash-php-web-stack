@@ -194,8 +194,9 @@ generate_caddy_website_file() {
 
     # Return 404 on unauthorized paths
     respond @disallowed 404
+  }
 	EOF
-
+	caddy fmt "/etc/caddy/conf.d/${sitename}.caddy" --overwrite
 }
 
 
