@@ -1,9 +1,11 @@
 #!/bin/bash
 print_green() {
   echo -e "\e[32m$1\e[0m"
+  printf "\n"
 }
 print_red() {
   echo -e "\e[31m$1\e[0m"
+  printf "\n"
 }
 
 yes_no_prompt() {
@@ -11,7 +13,7 @@ yes_no_prompt() {
   local user_input
 
   while true; do
-    read -p "$prompt_message (y/n): " user_input
+    read -r "$prompt_message (y/n): " user_input
     case $user_input in
       [Yy]* )
         return 0
@@ -38,16 +40,6 @@ service_is_running() {
 # Function to check if a service is enabled
 service_is_enabled() {
     systemctl is-enabled --quiet "$1"
-}
-
-set_webserver_credentials() {
-  if [ "$1" = "caddy" ]; then
-    webserver_user="caddy"
-    webserver_group="caddy"
-  else
-    webserver_user="www-data"
-    webserver_group="www-data"
-  fi
 }
 
 generate_site_base_folders() {
@@ -170,6 +162,55 @@ rename_extensions() {
   done
 }
 
+generate_php_pool_config() {
+	# need php_version
+	# need sitename
+	# need webserver
+	local _php_version="$1"
+	local _webserver="$2"
+	local _sitename="$3"
+
+	# Get correct user and groups
+	if [ "$_webserver" = "caddy" ]; then
+		_webserver_user="caddy"
+		_webserver_group="caddy"
+	else
+		_webserver_user="www-data"
+		_webserver_group="www-data"
+	fi
+
+	# disable existing php_pool files
+	print_green "disabling existing php-fpm pool config"
+	rename_extensions "/etc/php/${_php_version}/fpm/pool.d" "conf" "disabled"
+
+	# generate a new file
+	_php_version_underscore="${_php_version//./_}"
+	_php_pool_socket="/var/run/php${_php_version_underscore}-fpm-${_sitename}.sock"
+
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  # WARNING TAB INDENT must BE REAL TABS not SPACES otherwise
+  # EOF and inside tabs will not work properly
+  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	cat > "/etc/php/${_php_version}/fpm/pool.d/${_sitename}.conf" <<-EOF
+	[$_sitename]
+
+	user = $_webserver_user
+	group = $_webserver_group
+	listen.owner = $_webserver_user
+	listen.group = $_webserver_group
+
+	listen = $_php_pool_socket
+
+	pm = dynamic
+	pm.max_children = 5
+	pm.start_servers = 2
+	pm.min_spare_servers = 1
+	pm.max_spare_servers = 3
+
+	chdir = /
+	EOF
+}
+
 generate_caddy_base_config() {
 	_current_datetime=$(date +"%Y-%m-%d_%H-%M-%S")
 	# create /etc/caddy/conf.d folder
@@ -189,14 +230,14 @@ generate_caddy_base_config() {
 	import /etc/caddy/conf.d/*.caddy
 	EOF
 	# Reformat caddy file
-	caddy fmt "/etc/caddy/Caddyfile" -- overwrite
-	systemctl reload caddy
 }
 
 
 generate_caddy_website_file() {
 	local _sitename="$1"
-	local _php_pool_sock="$2"
+	local _php_version="$2"
+
+	_php_pool_socket="/var/run/php${_php_version//./_}-fpm-${_sitename}.sock"
 
 	cat > "/etc/caddy/conf.d/${sitename}.caddy" <<-EOF
 	#
@@ -215,7 +256,7 @@ generate_caddy_website_file() {
     # root of site
     root * /var/www/$_sitename/www
     # PHP-FPM sock
-    php_fastcgi unix/$_php_pool_sock
+    php_fastcgi unix/$_php_pool_socket
     # Static content
     file_server
     # Gzip compression
@@ -240,7 +281,7 @@ generate_caddy_website_file() {
 generate_webserver_conf_file() {
 	local _webserver="$1"
 	local _sitename="$2"
-	local _php_pool_sock="$3"
+	local _php_version="$3"
 
 	case "$_webserver" in
 			"caddy")
@@ -248,7 +289,7 @@ generate_webserver_conf_file() {
 				rename_extensions "/etc/caddy/conf.d/" "caddy" "disabled"
 
 				print_green "generate a new config for ${_sitename}"
-				generate_caddy_website_file "$_sitename" "$_php_pool_sock"
+				generate_caddy_website_file "$_sitename" "$_php_version"
 				;;
 			"nginx")
 				# TODO generate config for nginx
@@ -344,6 +385,9 @@ if [ -z "$webserver_found" ] ; then
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
     sudo apt update
     sudo apt install caddy -y
+    # Reformat Caddyfile
+    caddy fmt "/etc/caddy/Caddyfile" -- overwrite
+    # Start & enable caddy service
     systemctl start caddy && systemctl enable caddy
   elif [ "$webserver" = "nginx" ]; then
     echo "nginx"
@@ -480,6 +524,13 @@ fi
 # echo $user
 # useradd -m -g "$user" -s /bin/bash "$username"
 
+# Get correct user and groups
+if [ "$webserver" = "caddy" ]; then
+	webserver_group="caddy"
+else
+	webserver_group="www-data"
+fi
+
 print_green "Add deploy user"
 useradd -m -g "deploy" -s /bin/bash "deploy"
 usermod -a -G "$webserver_group" deploy
@@ -497,26 +548,9 @@ print_green "Please enter the site name"
 read -p "Website name (ie www.flexiways.be, intranet.nexx.be, nexxit.be) [website]:" sitename
 sitename=${sitename:-website}
 
-if check_folder_exists "/var/www/$sitename"; then
-  print_red "Warning /var/www/$sitename already exists"
-else
-  print_green "creating /var/www/$sitename folder and subfolders with permission for $webserver"
-  mkdir -p /var/www/"$sitename"
-  chown "$webserver_user":"$webserver_group" /var/www/"$sitename"
-  chmod 770 /var/www/"$sitename"
-
-  mkdir -p /var/www/"$sitename"/logs
-  chown "$webserver_user":"$webserver_group" /var/www/"$sitename"/logs
-  chmod 2750 /var/www/"$sitename"/logs
-
-  mkdir -p /var/www/"$sitename"/backups
-  chown root:deploy /var/www/"$sitename"/backups
-  chmod 2750 /var/www/"$sitename"/backups
-
-  mkdir -p /var/www/"$sitename"/www
-  chown "$webserver_user":"$webserver_group" /var/www/"$sitename"/www
-  chmod 2770 /var/www/"$sitename"/www
-fi
+# Create base folder structure for website
+# TODO check if problem if already exists
+generate_site_base_folders "$sitename" "$webserver"
 
 # Setup php-fpm pool
 #--------------------
@@ -538,59 +572,9 @@ if list_files_with_extension "$php_pool_folder" "$php_pool_ext"; then
 #	fi
 fi
 
-# Set to always configure a php_pool unless said otherwise
-configure_php_pool="yes"
-# check if a specific $sitename.conf exists
-if [ -e "${php_pool_folder}${sitename}.${php_pool_ext}" ]; then
-	print_red	"${php_pool_folder}${sitename}.${php_pool_ext} already exists create a backup"
-	current_datetime=$(date +"%Y-%m-%d_%H-%M-%S")
-	mv "${php_pool_folder}${sitename}.${php_pool_ext}" "${php_pool_folder}${sitename}.backup_${current_datetime}"
-
-	# create new php-fpm pool config file with content
-#	if yes_no_prompt "Do you want to create a new php-fpm configs for ${sitename}?"; then
-#		print_green "disable existing php-fpm pool configs"
-#
-#		current_datetime=$(date +"%Y-%m-%d_%H-%M-%S")
-#		# rename file
-#		mv "${php_pool_folder}${sitename}.${php_pool_ext}" "${php_pool_folder}${sitename}.disabled_${current_datetime}"
-#	else
-#		configure_php_pool="no"
-#	fi
-fi
-
-# create a new ph pool config for the sitename
-
-if [ "$configure_php_pool" = 'yes' ]; then
-	php_pool_file="$php_pool_folder$sitename.$php_pool_ext"
-  php_version_underscore="${php_version//./_}"
-	php_pool_sock="/var/run/php${php_version_underscore}-fpm-${sitename}.sock"
-  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  # WARNING TAB INDENT must BE REAL TABS not SPACES otherwise
-  # EOF and inside tabs will not work properly
-  # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	cat > "$php_pool_file" <<-EOF
-	[$sitename]
-
-	user = $webserver_user
-	group = $webserver_group
-	listen.owner = $webserver_user
-	listen.group = $webserver_group
-
-	listen = $php_pool_sock
-
-	pm = dynamic
-	pm.max_children = 5
-	pm.start_servers = 2
-	pm.min_spare_servers = 1
-	pm.max_spare_servers = 3
-
-	chdir = /
-	EOF
-	echo "Configuration for $sitename has been written."
-
-	# restart php
-	systemctl restart "php${php_version}-fpm"
-fi
+# Set to always configure a new php_pool and disabling the existing ones
+print_green "Generate new php-fpm ${php_version} pool config for ${sitename} for ${webserver}"
+generate_php_pool_config "$php_version" "$webserver" "$sitename"
 
 # check process for php-fpm pool
 print_green "Checking php-pool running for ${sitename}"
@@ -613,7 +597,7 @@ print_green "Setup ${webserver} configuration for ${sitename}"
 # detect webserver and define conf folder and file
 
 # disable existing configs and generate new website config
-generate_webserver_conf_file "$webserver" "$sitename" "$php_pool_sock"
+generate_webserver_conf_file "$webserver" "$sitename" "$php_version"
 
 # reload webserver
 print_green "reload ${webserver} webserver"
