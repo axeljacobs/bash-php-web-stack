@@ -55,7 +55,7 @@ generate_site_base_folders() {
 		_webserver_group="www-data"
 	fi
 
-	print_green "creating /var/www/$_sitename folder structure and permissions for $_webserver"
+	print_green "Creating /var/www/$_sitename folder structure and permissions for $_webserver"
 
 	mkdir -p /var/www/"$_sitename"
 	chown "$_webserver_user":"$_webserver_group" /var/www/"$_sitename"
@@ -180,7 +180,7 @@ generate_php_pool_config() {
 	fi
 
 	# disable existing php_pool files
-	print_green "disabling existing php-fpm pool config"
+	print_green "Disabling existing php-fpm pool config"
 	rename_extensions "/etc/php/${_php_version}/fpm/pool.d" "conf" "disabled"
 
 	# generate a new file
@@ -285,10 +285,10 @@ generate_webserver_conf_file() {
 
 	case "$_webserver" in
 			"caddy")
-				print_green "disable existing caddy site configs"
+				print_green "Disabling existing caddy site configs"
 				rename_extensions "/etc/caddy/conf.d/" "caddy" "disabled"
 
-				print_green "generate a new config for ${_sitename}"
+				print_green "Generate a new config for ${_sitename}"
 				generate_caddy_website_file "$_sitename" "$_php_version"
 				;;
 			"nginx")
@@ -473,7 +473,7 @@ if [ "$install_php" = 'yes' ]; then
     print_red "PHP $php_version is already installed"
   else
     # not installed
-    print_green "installing php$php_version"
+    print_green "Installing php$php_version"
     # TODO Check if there is a difference with 8.x and 7.4 cfr apt list --installed | grep php on wordpress server
     apt install -y \
     	php"$php_version" \
@@ -518,12 +518,6 @@ fi
 # Setup user account & group
 #----------------------------
 
-# print_green "Setup user for running the wordpress"
-# read -p 'Provide a username for the wordpress folder security (ie. prod, deploy, staging) [prod]: ' user
-# user=${user:-prod}
-# echo $user
-# useradd -m -g "$user" -s /bin/bash "$username"
-
 # Get correct user and groups
 if [ "$webserver" = "caddy" ]; then
 	webserver_group="caddy"
@@ -531,7 +525,7 @@ else
 	webserver_group="www-data"
 fi
 
-print_green "Add deploy user"
+print_green "Adding the deploy user"
 useradd -m -g "deploy" -s /bin/bash "deploy"
 usermod -a -G "$webserver_group" deploy
 
@@ -542,10 +536,10 @@ if ! is_folder_empty "/var/www/"; then
   print_red "Warning /var/www/ contains already one or more folders"
 fi
 
-print_green "Please enter the site name"
+print_green "Configure website"
 
 # shellcheck disable=SC2162
-read -p "Website name (ie www.flexiways.be, intranet.nexx.be, nexxit.be) [website]:" sitename
+read -p "Enter website name (ie www.flexiways.be, intranet.nexx.be, nexxit.be) [website]:" sitename
 sitename=${sitename:-website}
 
 # Create base folder structure for website
@@ -555,22 +549,6 @@ generate_site_base_folders "$sitename" "$webserver"
 # Setup php-fpm pool
 #--------------------
 print_red "Setup php-fpm pool configuration"
-
-# detect existing files
-php_pool_folder="/etc/php/$php_version/fpm/pool.d/"
-php_pool_ext="conf"
-
-if list_files_with_extension "$php_pool_folder" "$php_pool_ext"; then
-  print_red "configuration files already exists"
-	print_green "disable existing php-fpm pool configs"
-	# Force disable existing php pool config
-	rename_extensions "$php_pool_folder" "$php_pool_ext" "disabled"
-	# disable existing php-fpm pool conf files
-#	if yes_no_prompt "Do you want to disable and keep all php-fpm configs?"; then
-#		print_green "disable existing php-fpm pool configs"
-#		rename_extensions "$php_pool_folder" "$php_pool_ext" "disabled"
-#	fi
-fi
 
 # Set to always configure a new php_pool and disabling the existing ones
 print_green "Generate new php-fpm ${php_version} pool config for ${sitename} for ${webserver}"
@@ -602,10 +580,6 @@ print_green "Setup ${webserver} configuration for ${sitename}"
 generate_webserver_conf_file "$webserver" "$sitename" "$php_version"
 
 # reload webserver
-print_green "reload ${webserver} webserver"
+print_green "Reload ${webserver} webserver"
 systemctl restart "$webserver"
-
-# write new config
-#cat > "$php_pool_file" <<-EOF
-#EOF
 
