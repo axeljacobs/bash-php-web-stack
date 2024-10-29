@@ -581,6 +581,8 @@ print_green "Checking php-pool running for ${sitename}"
 # shellcheck disable=SC2126
 # shellcheck disable=SC2009
 sleep 2
+# shellcheck disable=SC2009
+# shellcheck disable=SC2126
 process_count=$(ps aux | grep "php-fpm: pool ${sitename}" | grep -v grep | wc -l)
 
 if [ "$process_count" -eq 0 ]; then
