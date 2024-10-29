@@ -13,7 +13,7 @@ yes_no_prompt() {
   local user_input
 
   while true; do
-    read -r "$prompt_message (y/n): " user_input
+    read -p "$prompt_message (y/n): " user_input
     case $user_input in
       [Yy]* )
         return 0
@@ -179,9 +179,19 @@ generate_php_pool_config() {
 		_webserver_group="www-data"
 	fi
 
-	# disable existing php_pool files
-	print_green "Disabling existing php-fpm pool config"
-	rename_extensions "/etc/php/${_php_version}/fpm/pool.d" "conf" "disabled"
+	# Get all installed version and disable existing php_pool files
+	print_green "Disabling all existing php-fpm pool config for all php versions"
+	for dir in /etc/php/*/; do
+		if [ -d "$dir" ]; then
+			rename_extensions "${dir}/fpm/pool.d" "conf" "disabled"
+		fi
+	done
+
+#	# disable existing php_pool files
+#	print_green "Disabling existing php-fpm pool config"
+#	# TODO disable in all php_versions OR LESS GOOD disable other php-fpm service
+#	# Get all installed version
+#	rename_extensions "/etc/php/${_php_version}/fpm/pool.d" "conf" "disabled"
 
 	# generate a new file
 	_php_version_underscore="${_php_version//./_}"
