@@ -172,8 +172,7 @@ generate_caddy_website_file() {
 			path /wp-config.php
       path /readme.html
       path /wp-content/uploads/*.php
-      path /wp-content/uploads/*/*.php
-      path /wp-content/uploads/*/*/*.php
+      path /wp-content/uploads/**/*.php
     }
     # root of site
     root * /var/www/$_sitename/www
