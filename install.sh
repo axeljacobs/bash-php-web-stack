@@ -72,7 +72,7 @@ generate_site_base_folders() {
 	mkdir -p /var/www/"$_sitename"/restore/db
 	mkdir -p /var/www/"$_sitename"/restore/files
 	chown -R root:deploy /var/www/"$_sitename"/restore
-	chmod -R 2750 /var/www/"$_sitename"/restore
+	chmod -R 2770 /var/www/"$_sitename"/restore
 
 	mkdir -p /var/www/"$_sitename"/www
 	chown "$_webserver_user":"$_webserver_group" /var/www/"$_sitename"/www
