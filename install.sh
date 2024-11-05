@@ -74,9 +74,9 @@ generate_site_base_folders() {
 	chown -R root:deploy /var/www/"$_sitename"/restore
 	chmod -R 2770 /var/www/"$_sitename"/restore
 
-	mkdir -p /var/www/"$_sitename"/www
-	chown "$_webserver_user":"$_webserver_group" /var/www/"$_sitename"/www
-	chmod 2770 /var/www/"$_sitename"/www
+	mkdir -p /var/www/"$_sitename"/public
+	chown "$_webserver_user":"$_webserver_group" /var/www/"$_sitename"/public
+	chmod 2770 /var/www/"$_sitename"/public
 
 }
 
@@ -264,7 +264,7 @@ generate_caddy_website_file() {
       path /wp-content/uploads/**/*.php
     }
     # root of site
-    root * /var/www/$_sitename/www
+    root * /var/www/$_sitename/public
     # PHP-FPM sock
     php_fastcgi unix/$_php_pool_socket
     # Static content
@@ -306,7 +306,7 @@ generate_nginx_website_file() {
 		server_name $_sitename;
 
 		# Path to document root
-		root /var/www/$_sitename/www;
+		root /var/www/$_sitename/public;
 
 		# File to be used as index
 		index index.php;
@@ -709,7 +709,7 @@ sitename=${sitename:-website}
 generate_site_base_folders "$sitename" "$webserver"
 
 # generate simple phpinfo file to the website zone
-echo "<?php phpinfo(); ?>" > /var/www/"${sitename}"/www/index.php
+echo "<?php phpinfo(); ?>" > /var/www/"${sitename}"/public/index.php
 
 # Setup php-fpm pool
 #--------------------
