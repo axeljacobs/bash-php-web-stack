@@ -1,0 +1,178 @@
+#!/bin/bash
+print_green() {
+  printf "\n"
+  echo -e "\e[32m$1\e[0m"
+}
+print_red() {
+  echo -e "\e[31m$1\e[0m"
+}
+
+yes_no_prompt() {
+  local prompt_message=$1
+  local user_input
+
+  while true; do
+    read -p "$prompt_message (y/n): " user_input
+    case $user_input in
+      [Yy]* )
+        return 0
+        ;;
+      [Nn]* )
+        return 1
+        ;;
+      * )
+        echo "Please answer yes or no (y/n)."
+        ;;
+    esac
+  done
+}
+
+
+
+print_green "Restore a wordpress site with DB"
+
+print_green "Checking requirements"
+# Check root
+#------------
+if [[ $EUID -ne 0 ]]; then
+  print_red "This script must be run as root."
+  exit 1
+fi
+
+
+# Check services
+# --------------
+
+# Check if Mariadb commands for restoring the database are available
+# ------------------------------------------------------------------
+print_green "Check mysql command"
+ if ! [ -x "$(command -v mysql)" ]; then
+    print_red "ERROR: MySQL/MariaDB not installed (command mysql not found)."
+    print_red "ERROR: No restore of database possible!"
+    print_red "Cancel restore"
+    exit 1
+fi
+print_green "mysql command OK"
+
+# Check webserver
+# ---------------
+webserver=""
+
+if which nginx > /dev/null 2>&1; then
+  webserver="nginx"
+fi
+
+if which caddy > /dev/null 2>&1; then
+  webserver="caddy"
+fi
+
+if [[ "$webserver" != "nginx" && "$webserver" != "caddy" ]]; then
+  print_red "Error: nginx or caddy is not installed"
+  exit 1
+fi
+
+print_green "WEBSERVER is ${webserver}"
+
+# Check PHP
+# ---------
+
+if command -v php &> /dev/null; then
+  php_version=$(php -v | grep -oP 'PHP \K[0-9]+\.[0-9]+')
+else
+  print_red "Error: no php found"
+  exit 1
+fi
+
+print_green "PHP installed version: PHP-${php_version} "
+
+# Stop services
+# -------------
+print_green "Stopping ${webserver} service"
+systemctl stop $webserver
+print_green "Stopping php-${php_version}-fpm service"
+systemctl stop "php${php_version}-fpm"
+
+# get the sitename from the php-fpm pool config
+
+sitename=""
+pool_dir="/etc/php/${php_version}/fpm/pool.d"
+
+# Check if the php pool folder folder exists
+if [[ -d "$pool_dir" ]]; then
+  # Count the number of .conf files in the folder
+  conf_count=$(find "$pool_dir"/*.conf 2>/dev/null | wc -l)
+
+  # Provide feedback based on the count
+  if [[ $conf_count -eq 0 ]]; then
+    print_red "Error .conf files found in the folder '$pool_dir'."
+    exit 1
+  elif [[ $conf_count -gt 2 ]]; then
+  	print_red "Error multiple .conf files found in the folder '$pool_dir'."
+  	print_red "Fix the error and rerun this script."
+    exit 1
+  else
+  	sitename=$(basename /etc/php/"${php_version}"/fpm/pool.d/*.conf .conf)
+  fi
+else
+ print_red "The folder '$pool_dir' does not exist."
+  exit 1
+fi
+
+# Stop if non sitename is defined
+if [[ -z "$sitename" ]]; then
+  echo "sitename is empty. Exiting with status code 1."
+  exit 1
+fi
+
+
+# Set backup source folders
+print_green "Checking folders"
+src_folder="/var/www/${sitename}/restore"
+src_db_folder="${src_folder}/db"
+src_files_folder="${src_folder}/files"
+target_files_folder="/var/www/${sitename}/public"
+
+echo "db source folder: ${src_db_folder}"
+echo "files source folder: ${src_files_folder}"
+echo "files target folder: ${target_files_folder}"
+
+# DB folder and file
+# check folder
+print_green "Checking if db file exists in  ${src_db_folder}"
+if [ -z "$(ls -A "$src_db_folder")" ]; then
+  print_red "The db folder $src_db_folder is empty."
+  exit 1
+else
+	conf_count=$(find "$src_db_folder"/* 2>/dev/null | wc -l)
+	if [[ $conf_count -gt 1 ]]; then
+      print_red "Error multiple files in ${src_db_folder}."
+      exit 1
+  fi
+fi
+db_file=$(find "${src_db_folder}"/*.sql)
+echo "$db_file"
+# TODO Check file extension
+
+# Files folder and files
+# check folder
+print_green "Checking files to restore ${src_files_folder}"
+if [ -z "$(ls -A "$src_files_folder")" ]; then
+  print_red "The files folder $src_files_folder is empty."
+  exit 1
+else
+	conf_count=$(find "$src_files_folder"/* 2>/dev/null | wc -l)
+	if [[ $conf_count -gt 1 ]]; then
+      print_red "Error multiple files in ${src_files_folder}. We expect only one .tar.gz file !"
+      exit 1
+  fi
+fi
+targz_file=$(find "${src_files_folder}"/*.tar.gz)
+echo "$targz_file"
+# TODO Check file extension
+
+
+
+
+# If compressed : decompress into target
+# If not compressed: copy without rights to target
+
