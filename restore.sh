@@ -60,10 +60,14 @@ webserver=""
 
 if which nginx > /dev/null 2>&1; then
   webserver="nginx"
+	_webserver_user="www-data"
+	_webserver_group="www-data"
 fi
 
 if which caddy > /dev/null 2>&1; then
   webserver="caddy"
+	_webserver_user="caddy"
+	_webserver_group="caddy"
 fi
 
 if [[ "$webserver" != "nginx" && "$webserver" != "caddy" ]]; then
@@ -125,7 +129,7 @@ if [[ -z "$sitename" ]]; then
 fi
 
 
-# Set backup source folders
+# Set backup folders
 print_green "Checking folders"
 src_folder="/var/www/${sitename}/restore"
 src_db_folder="${src_folder}/db"
@@ -136,7 +140,7 @@ echo "db source folder: ${src_db_folder}"
 echo "files source folder: ${src_files_folder}"
 echo "files target folder: ${target_files_folder}"
 
-# DB folder and file
+# SRC DB folder and file
 # check folder
 print_green "Checking if db file exists in  ${src_db_folder}"
 if [ -z "$(ls -A "$src_db_folder")" ]; then
@@ -153,7 +157,7 @@ db_file=$(find "${src_db_folder}"/*.sql)
 echo "$db_file"
 # TODO Check file extension
 
-# Files folder and files
+# SRC Files folder and files
 # check folder
 print_green "Checking files to restore ${src_files_folder}"
 if [ -z "$(ls -A "$src_files_folder")" ]; then
@@ -168,11 +172,28 @@ else
 fi
 targz_file=$(find "${src_files_folder}"/*.tar.gz)
 echo "$targz_file"
-# TODO Check file extension
 
+# TARGET Files folder and files
+# check folder
+print_green "Checking files to restore ${target_files_folder}"
+if [ -n "$(ls -A "$target_files_folder")" ]; then
+  print_red "The target folder $target_files_folder is NOT empty. Please backup and empty before rerun this script"
+  exit 1
+  # TODO create a backup option to tar.gz the content of the public folder
+fi
+echo "$target_files_folder is empty."
 
+# Decompress the tar.gz file in the public folder
+print_green "Decompress archive in ${target_files_folder}"
+tar -I pigz -xvpf "$targz_file" -C "$target_files_folder"
 
-
-# If compressed : decompress into target
-# If not compressed: copy without rights to target
+# Reset ownership and permission
+# Ownership
+print_green "Reset ownership for ${target_files_folder}"
+chown -R deploy:"$_webserver_group" /var/www/"$sitename"/public
+# Permissions
+# set all permission to 750
+chmod -R 2750 "$target_files_folder"
+# set the files (not the folder) permission correctly
+find "$target_files_folder"/* -type f -exec chmod 640 {} \;
 
