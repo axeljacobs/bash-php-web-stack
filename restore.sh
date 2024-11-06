@@ -153,7 +153,15 @@ else
       exit 1
   fi
 fi
+compressed_db_file=$(find "${src_db_folder}"/*.tar.gz)
+
+# Check if the file is a compressed file
+if [ -n "$compressed_db_file" ]; then
+    echo "decompressing database file..."
+    tar -I pigz -xvpf "$compressed_db_file" -C "$src_db_folder"
+fi
 db_file=$(find "${src_db_folder}"/*.sql)
+
 echo "$db_file"
 # TODO Check file extension
 
@@ -189,11 +197,60 @@ tar -I pigz -xvpf "$targz_file" -C "$target_files_folder"
 
 # Reset ownership and permission
 # Ownership
-print_green "Reset ownership for ${target_files_folder}"
+print_green "Resetting ownership and permissions for ${target_files_folder}"
 chown -R deploy:"$_webserver_group" /var/www/"$sitename"/public
 # Permissions
 # set all permission to 750
 chmod -R 2750 "$target_files_folder"
 # set the files (not the folder) permission correctly
 find "$target_files_folder"/* -type f -exec chmod 640 {} \;
+
+# Restore Database
+# ----------------
+print_green "Preparing database restore"
+# Get db_name
+db_name=$(grep DB_NAME "${target_files_folder}"/wp-config.php | tr "'" ':' | tr '"' ':' | cut -d: -f4)
+# Get db_user
+db_user=$(grep DB_USER "${target_files_folder}"/wp-config.php | tr "'" ':' | tr '"' ':' | cut -d: -f4)
+# Get db_password
+db_password=$(grep DB_PASSWORD "${target_files_folder}"/wp-config.php | tr "'" ':' | tr '"' ':' | cut -d: -f4)
+
+
+# Check if database exists
+print_green "Checking if database ${db_name} exists"
+#   If yes STOP or rename/export existing database
+db=$(mysql -e "SHOW DATABASES LIKE '${db_name}';")
+
+if [ "$db" != "" ]; then
+  bck_db_name="bck_$(date +'%Y%m%d_%H%M%S')_${db_name}"
+  echo "Database ${db_name} exists, renaming to ${bck_db_name}"
+  # mysqladmin -u username -p"password" create library
+  # $ mysql -u dbUsername -p"dbPassword" oldDatabase -sNe 'show tables' | while read table; do mysql -u dbUsername -p"dbPassword" -sNe "RENAME TABLE oldDatabase.$table TO newDatabase.$table"; done
+  mysql -e "CREATE DATABASE \`$bck_db_name\`;"
+  mysql "$db_name" -sNe 'show tables' | while read table; do mysql -sNe "RENAME TABLE \`$db_name\`.$table TO \`$bck_db_name\`.$table"; done
+	mysql -e "DROP DATABASE \`$db_name\`;"
+	mysql -e "CREATE DATABASE \`$db_name\`;"
+fi
+
+# Restore database from file
+print_green "Importing database..."
+mysql "${db_name}" < "${db_file}"
+
+# Create user with password and grant access to database
+print_green "Setup database user, password and permissions"
+echo "checking if ${db_user} user exists"
+user_count=$(mysql -e "SELECT COUNT(*) FROM mysql.user WHERE user = '$db_user'" | tail -n1)
+
+if [ "$user_count" -gt 0 ]
+then
+  echo "User exists"
+else
+  echo "User doesn't exist, creating"
+  mysql -e "CREATE USER '${db_user}'@'localhost' IDENTIFIED BY '${db_password}';"
+fi
+echo "applying privileges"
+mysql -e "GRANT ALL PRIVILEGES ON \`$db_name\`.* TO '${db_user}'@'localhost';"
+mysql -e "FLUSH PRIVILEGES;"
+
+# Check Reverse proxy config
 
