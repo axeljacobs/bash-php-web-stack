@@ -58,25 +58,25 @@ generate_site_base_folders() {
 	print_green "Creating /var/www/$_sitename folder structure and permissions for $_webserver"
 
 	mkdir -p /var/www/"$_sitename"
-	chown "$_webserver_user":"$_webserver_group" /var/www/"$_sitename"
-	chmod 770 /var/www/"$_sitename"
+	chown deploy:"$_webserver_group" /var/www/"$_sitename"
+	chmod 750 /var/www/"$_sitename"
 
 	mkdir -p /var/www/"$_sitename"/logs
-	chown "$_webserver_user":"$_webserver_group" /var/www/"$_sitename"/logs
-	chmod 2750 /var/www/"$_sitename"/logs
+	chown deploy:"$_webserver_group" /var/www/"$_sitename"/logs
+	chmod 2760 /var/www/"$_sitename"/logs
 
 	mkdir -p /var/www/"$_sitename"/backups
 	chown root:deploy /var/www/"$_sitename"/backups
-	chmod 2750 /var/www/"$_sitename"/backups
+	chmod 2740 /var/www/"$_sitename"/backups
 
 	mkdir -p /var/www/"$_sitename"/restore/db
 	mkdir -p /var/www/"$_sitename"/restore/files
 	chown -R root:deploy /var/www/"$_sitename"/restore
-	chmod -R 2770 /var/www/"$_sitename"/restore
+	chmod -R 2760 /var/www/"$_sitename"/restore
 
 	mkdir -p /var/www/"$_sitename"/public
-	chown "$_webserver_user":"$_webserver_group" /var/www/"$_sitename"/public
-	chmod 2770 /var/www/"$_sitename"/public
+	chown deploy:"$_webserver_group" /var/www/"$_sitename"/public
+	chmod 2750 /var/www/"$_sitename"/public
 
 }
 
