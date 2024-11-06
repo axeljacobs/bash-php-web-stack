@@ -59,20 +59,20 @@ generate_site_base_folders() {
 
 	mkdir -p /var/www/"$_sitename"
 	chown deploy:"$_webserver_group" /var/www/"$_sitename"
-	chmod 750 /var/www/"$_sitename"
+	chmod 0750 /var/www/"$_sitename"
 
 	mkdir -p /var/www/"$_sitename"/logs
-	chown deploy:"$_webserver_group" /var/www/"$_sitename"/logs
-	chmod 2760 /var/www/"$_sitename"/logs
+	chown "$_webserver_group":deploy /var/www/"$_sitename"/logs
+	chmod 0740 /var/www/"$_sitename"/logs
 
 	mkdir -p /var/www/"$_sitename"/backups
 	chown root:deploy /var/www/"$_sitename"/backups
-	chmod 2740 /var/www/"$_sitename"/backups
+	chmod 0740 /var/www/"$_sitename"/backups
 
 	mkdir -p /var/www/"$_sitename"/restore/db
 	mkdir -p /var/www/"$_sitename"/restore/files
 	chown -R root:deploy /var/www/"$_sitename"/restore
-	chmod -R 2760 /var/www/"$_sitename"/restore
+	chmod -R 0760 /var/www/"$_sitename"/restore
 
 	mkdir -p /var/www/"$_sitename"/public
 	chown deploy:"$_webserver_group" /var/www/"$_sitename"/public
