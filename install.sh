@@ -247,8 +247,9 @@ generate_caddy_base_config() {
  	# Import site configuration files *.caddy
 	import /etc/caddy/conf.d/*.caddy
 	EOF
+
 	# Reformat caddy file
-	cd /etc/caddy/ && caddy fmt Caddyfile --overwrite
+	caddy fmt "/etc/caddy/Caddyfile" --overwrite
 }
 
 
@@ -292,7 +293,7 @@ generate_caddy_website_file() {
     respond @disallowed 404
   }
 	EOF
-	cd /etc/caddy/conf.d/ && caddy fmt "${sitename}.caddy" --overwrite
+	caddy fmt "/etc/caddy/conf.d/${sitename}.caddy" --overwrite
 }
 
 generate_nginx_website_file() {
