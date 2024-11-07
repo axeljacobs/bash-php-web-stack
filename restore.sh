@@ -229,9 +229,11 @@ if [ "$db" != "" ]; then
   mysql -e "CREATE DATABASE \`$bck_db_name\`;"
   mysql "$db_name" -sNe 'show tables' | while read table; do mysql -sNe "RENAME TABLE \`$db_name\`.$table TO \`$bck_db_name\`.$table"; done
 	mysql -e "DROP DATABASE \`$db_name\`;"
+else
+	echo "Database ${db_name} does not exists"
 fi
-
 # Create/Recreate database
+echo "Create or Recreate Database ${db_name}"
 mysql -e "CREATE DATABASE \`$db_name\`;"
 
 # Restore database from file
