@@ -274,5 +274,5 @@ else
 fi
 
 # restart php & webserver
-
+print_green "Restarting php${php_version}-fpm and $webserver"
 systemctl restart $webserver php"${php_version}"-fpm
