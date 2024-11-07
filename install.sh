@@ -553,7 +553,7 @@ if [ -z "$webserver_found" ] ; then
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
     sudo apt update
-    sudo apt install -y caddy
+    sudo apt -y -qq install caddy
     # Reformat Caddyfile
     caddy fmt "/etc/caddy/Caddyfile" -- overwrite
     # Start & enable caddy service
@@ -673,7 +673,7 @@ fi
 if service_exists "mariadb"; then
   print_red "MariaDB already installed"
 else
-  apt install mariadb-server -y
+  apt install -y -qq mariadb-server
   systemctl start mariadb && systemctl enable mariadb
   mysql_secure_installation
 fi
