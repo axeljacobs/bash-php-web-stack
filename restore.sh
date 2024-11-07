@@ -258,3 +258,21 @@ mysql -e "FLUSH PRIVILEGES;"
 
 # Check Reverse proxy config
 
+# Path to your wp-config.php file
+wp_config_file="${target_files_folder}/wp-config.php"
+
+# Use grep to search for each part of the PHP snippet
+print_green "Check reverse proxy config in wp-config.php"
+if grep -q "if(\$_SERVER\['HTTP_X_FORWARDED_PROTO'\] == 'https')" "$wp_config_file" && \
+   grep -q "\$_SERVER\['HTTPS'\] = 'on';" "$wp_config_file" && \
+   grep -q "\$_SERVER\['SERVER_PORT'\] = 443;" "$wp_config_file"; then
+    echo "The HTTPS-forwarded proto snippet exists in wp-config.php"
+else
+    print_red "The HTTPS-forwarded proto snippet does not exist in wp-config.php"
+    echo "Add this snippet at the top of wp-config.php"
+    printf "\nif(\$_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https'){\n\t\$_SERVER['HTTPS'] = 'on';\n\t\$_SERVER['SERVER_PORT'] = 443;\n}\n\n"
+fi
+
+# restart php & webserver
+
+systemctl restart $webserver php"${php_version}"-fpm
