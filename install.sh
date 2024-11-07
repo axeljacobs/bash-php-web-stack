@@ -248,7 +248,7 @@ generate_caddy_base_config() {
 	import /etc/caddy/conf.d/*.caddy
 	EOF
 	# Reformat caddy file
-	cd /etc/caddy/conf.d/ && caddy fmt Caddyfile --overwrite
+	cd /etc/caddy/ && caddy fmt Caddyfile --overwrite
 }
 
 
