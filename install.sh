@@ -292,7 +292,7 @@ generate_caddy_website_file() {
     respond @disallowed 404
   }
 	EOF
-	caddy fmt "/etc/caddy/conf.d/${sitename}.caddy" --overwrite
+	cd /etc/caddy/conf.d/ && caddy fmt "${sitename}.caddy" --overwrite
 }
 
 generate_nginx_website_file() {
